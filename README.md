@@ -112,10 +112,6 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 4. Push to the branch
 5. Create a Pull Request
 
-## 📞 Support
-
-- GitHub Issues: [Create an issue](your-repo-url/issues)
-- Email: [your-email]
 
 ---
 
