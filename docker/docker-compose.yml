@@ -1,0 +1,47 @@
+services:
+  wordpress:
+    image: wordpress:latest
+    platform: linux/arm64
+    ports:
+      - "8000:80"
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - ./wordpress:/var/www/html  # Store WordPress files within the project directory
+      - ../theme:/var/www/html/wp-content/themes/my-theme
+      - ../chatgpt-assistant-plugin:/var/www/html/wp-content/plugins/chatgpt-assistant-plugin
+      - ../ai-blog-writer-plugin:/var/www/html/wp-content/plugins/ai-blog-writer-plugin
+    depends_on:
+      - db
+
+  db:
+    image: mariadb:latest  # Use MariaDB instead of MySQL for broader ARM support
+    platform: linux/arm64
+    ports:
+      - "3306:3306"
+    environment:
+      MARIADB_ROOT_PASSWORD: rootpassword
+      MARIADB_DATABASE: wordpress
+      MARIADB_USER: wordpress
+      MARIADB_PASSWORD: wordpress
+    volumes:
+      - ./db_data:/var/lib/mysql  # Store database files within the project directory
+
+  phpmyadmin:
+    image: phpmyadmin:latest  # Use latest version for compatibility
+    platform: linux/arm64
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: rootpassword
+    depends_on:
+      - db
+
+# Using directories within the project for persistent storage
+volumes:
+  db_data:

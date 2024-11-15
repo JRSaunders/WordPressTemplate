@@ -1,0 +1,63 @@
+/* Content width and layout - specifically for single blog posts */
+body.single-post article .entry-content {
+    max-width: 800px;
+    margin: 0;  /* Left alignment */
+    line-height: 1.6;
+}
+
+/* Image container should match content width - only in blog posts */
+body.single-post article .wp-block-image.ai-image-container {
+    margin: 2rem 0;  /* Left alignment */
+    max-width: 800px;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    background: #f8f8f8;
+}
+
+/* Image styling - only for AI generated images */
+body.single-post article .wp-block-image.ai-image-container img.ai-generated-image {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16/9;
+    object-fit: cover;
+    object-position: center;
+    transition: transform 0.3s ease;
+    margin: 0 !important;
+    display: block;
+}
+
+/* Hover effect - only for blog posts */
+body.single-post article .wp-block-image.ai-image-container:hover img.ai-generated-image {
+    transform: scale(1.02);
+}
+
+/* Add subtle border - only for blog posts */
+body.single-post article .wp-block-image.ai-image-container::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    pointer-events: none;
+}
+
+/* Mobile responsiveness - only for blog posts */
+@media (max-width: 1200px) {
+    body.single-post article .entry-content {
+        max-width: 100%;
+        padding: 0 1rem;
+    }
+
+    body.single-post article .wp-block-image.ai-image-container {
+        margin: 1rem -15px;
+        border-radius: 0;
+        max-width: none;
+    }
+    
+    body.single-post article .wp-block-image.ai-image-container::after {
+        border-radius: 0;
+    }
+} 
