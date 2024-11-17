@@ -3,7 +3,7 @@
 Plugin Name: ChatGPT Assistant
 Description: A WordPress plugin integrating OpenAI's ChatGPT using the Assistants feature with real-time streaming.
 Version: 1.0
-Author: Your Name
+Author: John R Saunders
 Text Domain: chatgpt-assistant
 */
 

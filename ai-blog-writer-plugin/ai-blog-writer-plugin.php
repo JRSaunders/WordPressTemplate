@@ -3,7 +3,7 @@
 Plugin Name: AI Blog Writer
 Description: Write blog posts with AI automatically using OpenAI Assistants API
 Version: 1.0
-Author: UpPace.ai 
+Author: John R Saunders
 */
 
 // Enable error reporting for debugging
