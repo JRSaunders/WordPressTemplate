@@ -3,14 +3,14 @@
 Plugin Name: ChatGPT Assistant
 Description: A WordPress plugin integrating OpenAI's ChatGPT using the Assistants feature with real-time streaming.
 Version: 1.0
-Author: John R Saunders
+Author: Your Name
 Text Domain: chatgpt-assistant
 */
 
 if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly
 }
-
+require_once plugin_dir_path(__FILE__) . 'includes/limiter.php';
 // Autoload Composer dependencies
 require_once plugin_dir_path(__FILE__) . 'vendor/autoload.php';
 
@@ -170,7 +170,6 @@ function chatgpt_assistant_admin_init() {
         )
     );
 
-    // Add the assistants array setting
     register_setting(
         'chatgpt-assistant-settings',
         'chatgpt_assistant_assistants',
@@ -181,12 +180,12 @@ function chatgpt_assistant_admin_init() {
         )
     );
 
-    // Add settings section
+    // Existing main settings section
     add_settings_section(
         'chatgpt_assistant_main_section',
         'Main Settings',
         null,
-        'chatgpt-assistant'
+        'chatgpt-assistant-settings'
     );
 
     // Add settings fields
@@ -194,7 +193,7 @@ function chatgpt_assistant_admin_init() {
         'chatgpt_assistant_api_key',
         'OpenAI API Key',
         'chatgpt_assistant_api_key_callback',
-        'chatgpt-assistant',
+        'chatgpt-assistant-settings',
         'chatgpt_assistant_main_section'
     );
 
@@ -202,7 +201,7 @@ function chatgpt_assistant_admin_init() {
         'chatgpt_assistant_display_mode',
         'Display Mode',
         'chatgpt_assistant_display_mode_callback',
-        'chatgpt-assistant',
+        'chatgpt-assistant-settings',
         'chatgpt_assistant_main_section'
     );
 
@@ -210,7 +209,7 @@ function chatgpt_assistant_admin_init() {
         'chatgpt_assistant_assistants',
         'Assistants',
         'chatgpt_assistant_assistants_callback',
-        'chatgpt-assistant',
+        'chatgpt-assistant-settings',
         'chatgpt_assistant_main_section'
     );
 }
@@ -244,6 +243,12 @@ function chatgpt_assistant_assistants_callback() {
         ?>
     </div>
     <button type="button" class="button" id="add-assistant">Add Assistant</button>
+    
+    <p class="description" style="margin-top: 15px;">
+        <strong>How to use:</strong> Add your assistants above, then use the shortcode with the assistant name:<br>
+        <code>[chatgpt_assistant assistant="your_assistant_name"]</code><br>
+        Example: If you named an assistant "support", use: <code>[chatgpt_assistant assistant="support"]</code>
+    </p>
     <script>
     jQuery(document).ready(function($) {
         $('#add-assistant').click(function() {
@@ -297,13 +302,81 @@ function chatgpt_assistant_render_settings_page() {
     if (!current_user_can('manage_options')) {
         return;
     }
+
+    // Get message stats
+    global $wpdb;
+    $today = date('Y-m-d');
+    $total_messages = 0;
+    $user_stats = array();
+
+    // Get all message count transients for today
+    $transients = $wpdb->get_results(
+        $wpdb->prepare(
+            "SELECT option_name, option_value FROM $wpdb->options 
+            WHERE option_name LIKE %s",
+            $wpdb->esc_like('_transient_chatgpt_message_count_') . '%' . $today
+        )
+    );
+
+    foreach ($transients as $transient) {
+        $count = (int)$transient->option_value;
+        $total_messages += $count;
+        
+        // Extract user identifier from transient name
+        preg_match('/chatgpt_message_count_(.+)_' . $today . '/', str_replace('_transient_', '', $transient->option_name), $matches);
+        if (isset($matches[1])) {
+            $user_id = $matches[1];
+            $user_stats[$user_id] = $count;
+        }
+    }
     ?>
     <div class="wrap">
-        <h1>ChatGPT Assistant Settings</h1>
+        <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+
+        <!-- Message Stats Card -->
+        <div class="card" style="max-width: 100%; margin-bottom: 20px; padding: 10px 20px; background: #fff;">
+            <h2>Today's Message Statistics</h2>
+            <p><strong>Total Messages Sent Today:</strong> <?php echo esc_html($total_messages); ?></p>
+            
+            <?php if (!empty($user_stats)): ?>
+                <h3>Messages by User</h3>
+                <table class="widefat striped" style="max-width: 500px;">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Messages</th>
+                            <th>Remaining</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($user_stats as $user_id => $count): ?>
+                            <tr>
+                                <td>
+                                    <?php 
+                                    if (strpos($user_id, 'visitor_') === 0) {
+                                        echo 'Guest User (' . esc_html(substr($user_id, 0, 15)) . '...)';
+                                    } else {
+                                        $user = get_user_by('id', $user_id);
+                                        echo $user ? esc_html($user->display_name) : 'Unknown User';
+                                    }
+                                    ?>
+                                </td>
+                                <td><?php echo esc_html($count); ?></td>
+                                <td><?php echo esc_html(50 - $count); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php else: ?>
+                <p>No messages sent today.</p>
+            <?php endif; ?>
+        </div>
+
+        <!-- Settings Form -->
         <form method="post" action="options.php">
             <?php
             settings_fields('chatgpt-assistant-settings');
-            do_settings_sections('chatgpt-assistant');
+            do_settings_sections('chatgpt-assistant-settings');
             submit_button();
             ?>
         </form>
@@ -321,6 +394,14 @@ function chatgpt_assistant_create_thread() {
     // Retrieve API Key and Assistant ID from options
     $api_key = get_option('chatgpt_assistant_api_key', '');
     $assistant_id = get_option('chatgpt_assistant_assistant_id', '');
+
+    if(empty($assistant_id)) {
+        $assistants = get_option('chatgpt_assistant_assistants', array());
+        if (!empty($assistants)) {
+            $assistant_id = $assistants[0]['id'];
+        }
+    }
+
 
     if (empty($api_key) || empty($assistant_id)) {
         wp_send_json_error(['message' => 'OpenAI API key or Assistant ID is missing. Please configure it in the plugin settings.']);
@@ -357,6 +438,17 @@ add_action('wp_ajax_nopriv_chatgpt_assistant_create_thread', 'chatgpt_assistant_
  */
 function chatgpt_assistant_stream() {
     check_ajax_referer('chatgpt_assistant_nonce', '_ajax_nonce');
+
+    // Add limiter check here
+    $limiter = new ChatGPT_Assistant_Limiter();
+    $can_send = $limiter->can_send_message();
+    
+    if (!$can_send['allowed']) {
+        echo "event: error\n";
+        echo "data: " . json_encode(['content' => $can_send['message']]) . "\n\n";
+        flush();
+        exit;
+    }
 
     // Clear output buffer and set headers
     while (ob_get_level()) ob_end_clean();
